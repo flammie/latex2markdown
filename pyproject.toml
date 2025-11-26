@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "latex2markdown"
+version = "0.1.0"
+description = "Some hacky scripts to convert latex documents to markdown"
+authors = ["Flammie A Pirinen <flammie@iki.fi>"]
+readme = "README.md"
+homepage = "https://flammie.github.io/latex2markdown/"
+repository = "https://github.com/flammie/latex2markdown"
+license = "GPL-3.0"
+
+[tool.poetry.scripts]
+latex2markdown = "latex2markdown.latex2markdown:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 79
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "F", #Pyflakes
+    "B", #flake8-bugbear
+    "A", #flake8-builtins 
+    "C4", #flake8-comprehensions
+    "ERA", #eradicate
+    "I", #isort
+    "PT", #flake8-pytest-style
+    "C90", #mccabe
+    "N", #pep8-naming
+    "E", #pycodestyle error
+    "PL" #Pylint
+]
+ignore = ["A003"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.group.build.dependencies]
+setuptools = "^68.0.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.2"
+
