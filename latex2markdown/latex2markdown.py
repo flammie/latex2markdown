@@ -41,7 +41,7 @@ def main():
     documentclass = documentclasses[0][1]
     dcoptions = documentclass[0][0]
     latex = documentclassre.sub("", latex)
-    usepackagere = re.compile(r"\\usepackage(\[[^]*]\])?({[^}]*})")
+    usepackagere = re.compile(r"\\usepackage(\[[^]]*\])?{([^}]*)}")
     usepackages = usepackagere.findall(latex)
     usedpackages = []
     for usepackage in usepackages:
@@ -50,6 +50,27 @@ def main():
     # contents
     # need some tracking for labels and refs
     # then cites and bibstuff
+    labelre = re.compile(r"\\label{([^}]*)}")
+    labels = labelre.findall(latex)
+    labelmap = {}
+    labelcount = 1
+    for label in labels:
+        if label in labelmap:
+            print(f"Duplicate label {label}! References may fail")
+        else:
+            labelmap[label] = "LABEL " + label
+            labelcount = labelcount + 1
+    latex = labelre.sub("<a id=\"\\1\">(LABEL \\1)</a>", latex)
+    refre = re.compile(r"\\ref{([^}]*)}")
+    refs = refre.findall(latex)
+    for ref in refs:
+        if not ref in labelmap:
+            print(f"ref to missing label {ref}, generating borken links")
+    latex = refre.sub("[REF \\1](#\\1)", latex)
+    citere = re.compile(r"\\cite{([^}]*)}")
+    cites = citere.findall(latex)
+    # TODO: maybe check against bibs?
+    latex = citere.sub("[CITE \\1](#\\1)", latex)
     # small local things first
     textttre = re.compile(r"\\texttt{([^}]*)}", re.MULTILINE)
     latex = textttre.sub(r"`\1`", latex)
@@ -61,6 +82,14 @@ def main():
     latex = urlre.sub(r"<\1>", latex)
     footnotere = re.compile(r"\\footnote{([^}]*)}", re.MULTILINE)
     latex = footnotere.sub(r" (footnote: \1)", latex)
+    textcolorre = re.compile(r"\\textcolor{([^}]*)}{([^}]*)}", re.MULTILINE)
+    latex = textcolorre.sub(r"<span style='color: \1'>\2</span>", latex)
+    # includegraphics...
+    #                                 \includegraphics[width=.5\textwidth ]{syntaxflow.png}
+    includegraphicsre = re.compile(r"\\includegraphics(\[[^]]*\])?{([^}]*)}")
+    latex = includegraphicsre.sub(r"![\2](\2)", latex)
+    # Linguistics
+    latex = latex.replace("\\ex.", "*Linguistic examples*:\n")
     # even more simple stuffs
     latex = latex.replace("\\begin{document}", "<!-- begin document -->")
     latex = latex.replace("\\maketitle", "<!-- make title -->")
@@ -74,6 +103,9 @@ def main():
     latex = latex.replace("\\begin{table*}", "*Table:*")
     latex = latex.replace("\\end{table}", "<!-- end table -->")
     latex = latex.replace("\\end{table*}", "<!-- end table* -->")
+    latex = latex.replace("\\begin{verbatim}", "\n```\n")
+    latex = latex.replace("\\end{verbatim}", "\n```\n")
+    latex = latex.replace("\\centering", "<!-- centering -->")
     latex = latex.replace("\\and", "and")
     latex = latex.replace("\\\\", " ")  # should be linebreak but but
     # stuffs
