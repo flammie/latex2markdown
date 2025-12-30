@@ -93,6 +93,9 @@ def main():
     for usepackage in usepackages:
         usedpackages.append(usepackage[1])
     latex = usepackagere.sub("", latex)
+    # no programming and macros
+    newcommandre = re.compile(r"\\newcommand\\([^{]*){.*}")
+    latex = newcommandre.sub(r"<!-- new command \1 -->", latex)
     # contents
     # need some tracking for labels and refs
     # then cites and bibstuff
@@ -107,7 +110,7 @@ def main():
         else:
             labelmap[label] = "LABEL " + label
             labelcount = labelcount + 1
-    latex = labelre.sub("<a id=\"\\1\">(LABEL \\1)</a>", latex)
+    latex = labelre.sub("<a id=\"\\1\">(¶ \\1)</a>", latex)
     refre = re.compile(r"\\ref{([^}]*)}")
     refs = refre.findall(latex)
     for ref in refs:
@@ -154,13 +157,16 @@ def main():
     latex = latex.replace("~", " ")
     latex = latex.replace("\\ ", " ")   # FIXME: other space?
     latex = latex.replace("\\\"{o}", "ö")
+    latex = latex.replace("\\\"{a}", "ä")
+    latex = latex.replace("\\ng", "ŋ")
     # tabulars...
-    tabularre = re.compile(r"\\begin{tabular}.*?\\end{tabular}",
+    tabularre = re.compile(r" *\\begin{tabular}.*?\\end{tabular}",
                            re.MULTILINE | re.DOTALL)
     tabulars = tabularre.findall(latex)
     tablecontent = ""
     for tabular in tabulars:
         tablecontent = tabular
+        tablecontent = tablecontent.lstrip()
         tablecontent = tablecontent.replace(r"\begin{tabular}", "")
         tablecontent = tablecontent.replace(r"\end{tabular}", "")
         if tablecontent.startswith("["):
@@ -173,22 +179,28 @@ def main():
             columns = columns + columnstr.count("c")
             columns = columns + columnstr.count("p")
             tablecontent = tablecontent[tablecontent.find("}", 1)+1:]
-        linerule = "+"
-        linerule = linerule + ("----+" * columns)
-        tablecontent = linerule + tablecontent
+        linerule = "|"
+        linerule = linerule + (" ---- |" * columns)
         tablefinal = ""
         for line in tablecontent.split("\n"):
+            line = line.lstrip()
             if "&" in line:
                 line = "| " + line.replace("&", " | ")
             if "<!-- LINEBREAK -->" in line:
-                line = line.replace("<!-- LINEBREAK -->",
-                                    "|\n" + linerule + "\n")
-            line = line.replace("\\toprule", "<!-- toprule -->")
-            line = line.replace("\\midrule", "<!-- midrule -->")
-            line = line.replace("\\bottomrule", "<!-- bottomrule -->")
-            line = line.replace("\\hline", "<!-- hline -->")
-            tablefinal += line + "\n"
-        latex = latex.replace(tabular, tablefinal)
+                line = line.replace("<!-- LINEBREAK -->", "|")
+            line = line.replace("\\toprule", "")
+            if "\\midrule" in line:
+                line = line.replace("\\midrule", linerule)
+                linerule = ""
+            line = line.replace("\\bottomrule", "")
+            if "\\hline" in line:
+                line = line.replace("\\hline", linerule)
+                linerule = ""
+            if line.strip() == "":
+                continue
+            else:
+                tablefinal += line + "\n"
+        latex = latex.replace(tabular, "\n\n" + tablefinal)
 
     # small local things first
     mathre = re.compile(r"\$([^$]*)\$")
@@ -211,6 +223,8 @@ def main():
     latex = latex.replace("\\appendix", "* * *\n\n# Appendix\n")
     captionre = re.compile(r"\\caption{([^}]*)}", re.MULTILINE)
     latex = captionre.sub(r" (Caption: \1)", latex)
+    definecolorre = re.compile(r"\\definecolor{([^}]*)}{([^}]*)}{([^}]*)}")
+    latex = definecolorre.sub(r"<!-- definecolor \1 \2 \3 -->", latex)
     # flammie specific
     aappdre = re.compile(r"\\aclanthologypostprintdoi{([^}]*)}")
     latex = aappdre.sub("Publisher’s version available at [ACL Anthology "
@@ -230,39 +244,89 @@ def main():
     latex = fnprre.sub("¹\n§TITLEFOOTNOTE§"
                        "<span style='font-size:8pt'>(¹ Authors' archival "
                        r"version: \1)</span>", latex)
+    # also my stuff
+    gecfail = re.compile(r"\\gecfail{([^}]*)}")
+    latex = gecfail.sub(r"<span style='text-decoration-line: "
+                        r"grammar-error'>\1</span>",
+                        latex)
+    spellfail = re.compile(r"\\mispelt{([^}]*)}")
+    latex = spellfail.sub(r"<span style='text-decoration-line: "
+                          r"spelling-error'>\1</span>",
+                          latex)
     # includegraphics...
     # \includegraphics[width=.5\textwidth]{syntaxflow.png}
     includegraphicsre = re.compile(r"\\includegraphics(\[[^]]*\])?{([^}]*)}")
     latex = includegraphicsre.sub(r"![\2](\2)", latex)
     # Linguistics
-    latex = latex.replace("\\ex.", "*Linguistic examples*:\n\n")
-    latex = latex.replace("\\exg.", "*Linguistic examples g*:\n\n")
+    latex = latex.replace("\\ex.", "**Linguistic examples:**\n\n")
+    latex = latex.replace("\\exg.", "**Linguistic example group:**\n\n")
     latex = latex.replace("\\ag.", "a. ")
     latex = latex.replace("\\b.", "b. ")
     # even more simple stuffs
     latex = latex.replace("\\begin{document}", "<!-- begin document -->")
     latex = latex.replace("\\end{document}", "<!-- end document -->")
     latex = latex.replace("\\maketitle", "<!-- make title -->")
-    latex = latex.replace("\\begin{abstract}", "*Abstract:*")
+    latex = latex.replace("\\begin{abstract}", "\n**Abstract:**")
     latex = latex.replace("\\end{abstract}", "<!-- end abstract -->")
-    latex = latex.replace("\\begin{figure}", "*Figure:*")
-    latex = latex.replace("\\begin{figure*}", "*Figure:*")
+    latex = latex.replace("\\begin{figure}", "\n**Figure:**")
+    latex = latex.replace("\\begin{figure*}", "\n**Figure:**")
     latex = latex.replace("\\end{figure}", "<!-- end figure -->")
     latex = latex.replace("\\end{figure*}", "<!-- end figure* -->")
-    latex = latex.replace("\\begin{table}", "*Table:*")
-    latex = latex.replace("\\begin{table*}", "*Table:*")
+    latex = latex.replace("\\begin{table}", "\n**Table:**")
+    latex = latex.replace("\\begin{table*}", "\n**Table:**")
     latex = latex.replace("\\end{table}", "<!-- end table -->")
     latex = latex.replace("\\end{table*}", "<!-- end table* -->")
     latex = latex.replace("\\begin{verbatim}", "\n```\n")
     latex = latex.replace("\\end{verbatim}", "\n```\n")
     latex = latex.replace("\\centering", "<!-- centering -->")
     latex = latex.replace("\\and", "\nand\n\n")
+    # things that cannot be handled properly
+    latex = latex.replace("\\small", "<!-- small -->")
+    latex = latex.replace("\\scriptsize", "<!-- scriptsize -->")
+    latex = latex.replace("\\bf", "<!-- bf -->")
+    # lists
+    itemizere = re.compile(r"\\begin{itemize}.*?\\end{itemize}",
+                           re.MULTILINE | re.DOTALL)
+    itemizes = itemizere.findall(latex)
+    itemizecontent = ""
+    for itemize in itemizes:
+        itemizecontent = itemize
+        itemizecontent = itemizecontent.replace(r"\begin{itemize}", "")
+        itemizecontent = itemizecontent.replace(r"\end{itemize}", "")
+        itemizecontent = itemizecontent.replace(r"\item ", "* ")
+        latex = latex.replace(itemize, itemizecontent)
+    enumeratere = re.compile(r"\\begin{enumerate}.*?\\end{enumerate}",
+                             re.MULTILINE | re.DOTALL)
+    enumerates = enumeratere.findall(latex)
+    enumeratecontent = ""
+    for enumrate in enumerates:
+        enumeratecontent = enumrate
+        enumeratecontent = enumeratecontent.replace(r"\begin{enumerate}", "")
+        enumeratecontent = enumeratecontent.replace(r"\end{enumerate}", "")
+        enumeratecontent = enumeratecontent.replace(r"\item ", "1. ")
+        latex = latex.replace(enumrate, enumeratecontent)
+    enumstarre = re.compile(r"\\begin{enumerate\*}.*?\\end{enumerate\*}",
+                            re.MULTILINE | re.DOTALL)
+    enumstars = enumstarre.findall(latex)
+    enumstarcontent = ""
+    for enumstar in enumstars:
+        enumstarcontent = enumstar
+        enumstarcontent = enumstarcontent.replace(r"\begin{enumerate*}", "")
+        enumstarcontent = enumstarcontent.replace(r"\end{enumerate*}", "")
+        enumstarcontent = enumstarcontent.replace(r"\item ", " ")
+        latex = latex.replace(enumstar, enumstarcontent)
     # stuffs
     sectionre = re.compile(r"\\section{([^}]*)}", re.MULTILINE)
     latex = sectionre.sub(r"## \1", latex)
     subsectionre = re.compile(r"\\subsection{([^}]*)}", re.MULTILINE)
     latex = subsectionre.sub(r"### \1", latex)
     subsubsectionre = re.compile(r"\\subsubsection{([^}]*)}", re.MULTILINE)
+    latex = subsubsectionre.sub(r"#### \1", latex)
+    sectionre = re.compile(r"\\section\*{([^}]*)}", re.MULTILINE)
+    latex = sectionre.sub(r"## \1", latex)
+    subsectionre = re.compile(r"\\subsection\*{([^}]*)}", re.MULTILINE)
+    latex = subsectionre.sub(r"### \1", latex)
+    subsubsectionre = re.compile(r"\\subsubsection\*{([^}]*)}", re.MULTILINE)
     latex = subsubsectionre.sub(r"#### \1", latex)
     # more contentful stuffs agan
     titlere = re.compile(r"\\title{([^}]*)}", re.MULTILINE)
@@ -278,8 +342,15 @@ def main():
     latex = latex.replace("§§§TITLE§§§", title)
     latex = latex.replace("§TITLEFOOTNOTE§", "\n\n")
     authorre = re.compile(r"\\author{([^}]*)}", re.MULTILINE)
-    latex = authorre.sub(r"Authors: \1", latex)
+    latex = authorre.sub(r"**Authors:** \1", latex)
     # final fixes
+    # I don't use the indent as codeblock markup so de-indenting most stuff
+    # will fix those problems (retain nested lists maybe?)
+    chompre = re.compile(r"^[ \t]*(\*\*|<!--|\(Caption|\w|!\[)",
+                         re.MULTILINE)
+    latex = chompre.sub(r"\1", latex)
+    latex = latex.replace(".\\@", ".")   # inter sent spacing
+    latex = latex.replace(".\\", ".")   # inter sent spacing
     latex = latex.replace("<!-- LINEBREAK -->", "\n")
     markdown = latex
     markdown = markdown + "\n* * *\n\n" + \
