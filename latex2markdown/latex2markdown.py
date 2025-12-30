@@ -14,6 +14,14 @@ def readbib(relpath: str, bibfile: str):
         bib = {}
         for line in f:
             line = line.strip()
+            # early fix
+            line = line.replace(r"\=u", "ū")
+            line = line.replace(r"\= u", "ū")
+            line = line.replace(r"\=e", "ē")
+            line = line.replace(r"\= e", "ē")
+            line = line.replace(r"\=\i", "ī")
+            line = line.replace(r"\= \i", "ī")
+            line = line.replace(r"\=", "¯")
             if line.startswith("@"):
                 bracket = line.find("{")
                 comma = line.find(",")
@@ -40,6 +48,45 @@ def readbib(relpath: str, bibfile: str):
                     stuff = stuff[:-1]
                 elif stuff.endswith("},") or stuff.endswith("\","):
                     stuff = stuff[:-2]
+                # fix escapes here already, there's more crap in bib than tex
+                forcecapsre = re.compile(r"{([A-Z]{1,6})}")
+                stuff = forcecapsre.sub(r"\1", stuff)
+                stuff = stuff.replace(r"{\'a}", "á")
+                stuff = stuff.replace(r"{\'c}", "ć")
+                stuff = stuff.replace(r"{\'e}", "é")
+                stuff = stuff.replace(r"{\'\i}", "í")
+                stuff = stuff.replace(r"{\'o}", "ó")
+                stuff = stuff.replace(r"{\'s}", "ś")
+                stuff = stuff.replace(r"{\'u}", "ú")
+                stuff = stuff.replace(r"{\'y}", "ý")
+                stuff = stuff.replace(r"{\`a}", "à")
+                stuff = stuff.replace(r"{\`e}", "è")
+                stuff = stuff.replace(r"{\`o}", "ò")
+                stuff = stuff.replace(r"{\"a}", "ä")
+                stuff = stuff.replace(r"{\"{\i}}", "ï")
+                stuff = stuff.replace(r"\"{o}", "ö")
+                stuff = stuff.replace(r"{\"o}", "ö")
+                stuff = stuff.replace(r"{\"O}", "Ö")
+                stuff = stuff.replace(r"{\"u}", "ü")
+                stuff = stuff.replace(r"{\: u}", "ü")
+                stuff = stuff.replace(r"{\o}", "ø")
+                stuff = stuff.replace(r"{\aa}", "å")
+                stuff = stuff.replace(r"\&", "&")
+                stuff = stuff.replace(r"{\ss}", "ß")
+                stuff = stuff.replace(r"{\ug}", "ǧ")
+                stuff = stuff.replace(r"{\vr}", "ř")
+                stuff = stuff.replace(r"{\vs}", "š")
+                stuff = stuff.replace(r"{\v Z}", "Ž")
+                stuff = stuff.replace(r"{\v c}", "č")
+                stuff = stuff.replace(r"{\v s}", "š")
+                stuff = stuff.replace(r"{\=u}", "ū")
+                stuff = stuff.replace(r"{\i}", "ı")
+                stuff = stuff.replace(r"{\.e}", "ė")
+                stuff = stuff.replace(r"{\l}", "ł")
+                stuff = stuff.replace(r"{\cC}", "Ç")
+                stuff = stuff.replace(r"{\cc}", "ç")
+                stuff = stuff.replace(r"{\~a}", "ã")
+                stuff = stuff.replace(r"{\~n}", "ñ")
                 bib[curkey][thing] = stuff.replace("\\", "\\\\")
             else:
                 pass
