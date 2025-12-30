@@ -124,18 +124,18 @@ def main():
     bibmap = {}
     for bib in bibs:
         bibmap.update(readbib(relpath, bib))
-    citere = re.compile(r"\\cite{([^}]*)}")
+    citere = re.compile(r"\\cite(\[[^]]*\])?{([^}]*)}")
     cites = citere.findall(latex)
     usedbibs = {}
-    for citestr in cites:
-        for cite in citestr.split(","):
+    for citegroup in cites:
+        for cite in citegroup[1].split(","):
             if cite in bibmap:
                 usedbibs[cite] = bibmap[cite]
             else:
                 print(f"bib data for {cite} missing, generating broken "
                       "citation", file=sys.stderr)
                 usedbibs[cite] = {"error": "missing from bibliography"}
-    latex = citere.sub("[(cites: \\1)](#\\1)", latex)
+    latex = citere.sub("[(cites: \\2\\1)](#\\2)", latex)
     bibcontent = "# References\n\n"
     # no support for bibliography styles, we just dump all available data
     bibliographystylere = re.compile(r"\\bibliographystyle{([^}]*)}")
@@ -146,7 +146,7 @@ def main():
             if len(v) > 60:
                 v = v[:60] + "..."
             bibcontent += f"    * {k}: {v}\n"
-    latex = bibliographyre.sub(bibcontent, latex)
+    latex = bibliographyre.sub(bibcontent.replace("\\", "\\\\"), latex)
     # smallest local things first: chars and codes
     latex = latex.replace("\\\\",
                           "<!-- LINEBREAK -->")  # should be linebreak but but
@@ -158,6 +158,7 @@ def main():
     latex = latex.replace("\\ ", " ")   # FIXME: other space?
     latex = latex.replace("\\\"{o}", "ö")
     latex = latex.replace("\\\"{a}", "ä")
+    latex = latex.replace("\\\v{s}", "š")
     latex = latex.replace("\\ng", "ŋ")
     # tabulars...
     tabularre = re.compile(r" *\\begin{tabular}.*?\\end{tabular}",
@@ -225,6 +226,8 @@ def main():
     latex = captionre.sub(r" (Caption: \1)", latex)
     definecolorre = re.compile(r"\\definecolor{([^}]*)}{([^}]*)}{([^}]*)}")
     latex = definecolorre.sub(r"<!-- definecolor \1 \2 \3 -->", latex)
+    hyphenationre = re.compile(r"\\hyphenation{([^}]*)}")
+    latex = hyphenationre.sub(r"<!-- hyphenation \1 -->", latex)
     # flammie specific
     aappdre = re.compile(r"\\aclanthologypostprintdoi{([^}]*)}")
     latex = aappdre.sub("Publisher’s version available at [ACL Anthology "
@@ -284,12 +287,17 @@ def main():
     latex = latex.replace("\\end{table*}", "<!-- end table* -->")
     latex = latex.replace("\\begin{verbatim}", "\n```\n")
     latex = latex.replace("\\end{verbatim}", "\n```\n")
+    latex = latex.replace("\\begin{small}", "<div style='font-size: small'>")
+    latex = latex.replace("\\end{small}", "</div>")
     latex = latex.replace("\\centering", "<!-- centering -->")
     latex = latex.replace("\\and", "\nand\n\n")
-    # things that cannot be handled properly
+    # things that cannot be handled properly...
+    # these are kind of trigger commands that change whole rest of the "block"
+    # figuring out where the block ends is a hard problem
     latex = latex.replace("\\small", "<!-- small -->")
     latex = latex.replace("\\scriptsize", "<!-- scriptsize -->")
     latex = latex.replace("\\bf", "<!-- bf -->")
+    latex = latex.replace("\\it", "<!-- it -->")
     # lists
     itemizere = re.compile(r"\\begin{itemize}.*?\\end{itemize}",
                            re.MULTILINE | re.DOTALL)
@@ -359,6 +367,12 @@ def main():
     latex = latex.replace(".\\", ".")   # inter sent spacing
     latex = latex.replace("<!-- LINEBREAK -->", "\n")
     latex = latex.replace("\\textbackslash", "\\")
+    latex = latex.replace("---", "—")
+    latex = latex.replace("<!--", "§SGMLCOMMENT§")
+    latex = latex.replace("-->", "§/SGMLCOMMENT§")
+    latex = latex.replace("--", "–")
+    latex = latex.replace("§SGMLCOMMENT§", "<!--")
+    latex = latex.replace("§/SGMLCOMMENT§", "-->")
     latex = latex.replace("{}", "")  # I use empty {} as command terminator
     markdown = latex
     markdown = markdown + "\n* * *\n\n" + \
