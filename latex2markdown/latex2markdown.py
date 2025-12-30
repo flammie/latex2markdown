@@ -262,6 +262,12 @@ def main():
     latex = latex.replace("\\exg.", "**Linguistic example group:**\n\n")
     latex = latex.replace("\\ag.", "a. ")
     latex = latex.replace("\\b.", "b. ")
+    # tcolorbox
+    tcolorboxre = re.compile(r"\\begin{tcolorbox}"
+                             r"\s*\[([^]]*)\](.*?)"
+                             r"\\end{tcolorbox}", re.MULTILINE | re.DOTALL)
+    latex = tcolorboxre.sub(r"<div style='border: black solid 5px;"
+                            r" background-color: gray'>\2</div>", latex)
     # even more simple stuffs
     latex = latex.replace("\\begin{document}", "<!-- begin document -->")
     latex = latex.replace("\\end{document}", "<!-- end document -->")
@@ -352,6 +358,8 @@ def main():
     latex = latex.replace(".\\@", ".")   # inter sent spacing
     latex = latex.replace(".\\", ".")   # inter sent spacing
     latex = latex.replace("<!-- LINEBREAK -->", "\n")
+    latex = latex.replace("\\textbackslash", "\\")
+    latex = latex.replace("{}", "")  # I use empty {} as command terminator
     markdown = latex
     markdown = markdown + "\n* * *\n\n" + \
         "<span style='font-size: 8pt'>Converted with [Flammie’s " + \
