@@ -8,17 +8,38 @@ stuffs, latex2markdown implements exactly the latex commands I have used in my
 texts so far, just abouts well enough to be able to convert them into markdown
 and nothing else.
 
+## Dependencies
+
+* Python
+
+## Installation
+
+Use pipx
+
+```
+pipx install git+https://github.com/flammie/latex2markdown
+```
+
+## Usage
+
+If installed, run `latex2markdown`, otherwise, point python to
+`-m latex2markdown.latex2markdown`.
+
+```console
+$ latex2markdown -i input.tex -o output.markdown
+```
+
 ## Rationale
 
 The purpose of this script is for converting [my](https://flammie.github.io)
-academic articles in LaTeX format into markdown format for web viewing. The
+academic articles from LaTeX format into markdown format for web viewing. The
 purpose of this script is to be lightweight, single pass, search and replace
 kind of hack to convert files. It is well known that TeX is a Turing complete
 programming language that would require a full parser and compiler and infinite
 passes to process the TeX file correctly to produce a beautiful document
 printed on paper with book style formattings, most of the features here are
 actually very irrelevant nowadays, 95 % of reading academic articles happens on
-screen and PDF readers with 2+ column formats and numbered references and
+screen, and PDF readers with 2+ column formats and numbered references and
 footnotes instead of hyperlinks are just ridiculous.
 
 ### Goals and non-goals
@@ -39,6 +60,7 @@ footnotes instead of hyperlinks are just ridiculous.
 * no maths, since markdown has no math support and html really neither, and
   anyone who reads papers in comp.ling. should be able to understand the linear
   TeX math codes just as well
+* no minipages, columns, space tweaking, page breaks etc.
 * the resulting markdown code can easily be tweaked to fix remaining bugs and
   issues
 * ...
