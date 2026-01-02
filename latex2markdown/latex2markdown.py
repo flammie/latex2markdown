@@ -234,6 +234,9 @@ def main():
                 v = v[:60] + "..."
             bibcontent += f"    * {k}: {v}\n"
     latex = bibliographyre.sub(bibcontent.replace("\\", "\\\\"), latex)
+    # hand-written bibs eww
+    latex = latex.replace(r"\begin{thebibliography}", "# References")
+    latex = latex.replace(r"\bibitem", "* ")
     # smallest local things first: chars and codes
     latex = latex.replace("\\\\",
                           "<!-- LINEBREAK -->")  # should be linebreak but but
@@ -262,8 +265,10 @@ def main():
     # theoretically only math symbols but I see no harm in replace everything
     latex = latex.replace("\\cdot", "⋅")
     latex = latex.replace("\\emptyset", "∅")
-    latex = latex.replace("\\rightarrow", "→")
-    latex = latex.replace("\\leftarrow", "←")
+    latex = latex.replace("\\Rightarrow", "→")
+    latex = latex.replace("\\rightarrow", "⇒")
+    latex = latex.replace("\\Leftarrow", "←")
+    latex = latex.replace("\\leftarrow", "⇐")
     # Alpha (Α, ), Beta (Β, ), Gamma (, ), Delta (Δ, ), Epsilon (Ε, ), Zeta (Ζ, ζ), Eta (Η, η), Theta (Θ, θ), Iota (Ι, ι), Kappa (Κ, κ), Lambda (Λ, λ), Mu (Μ, μ), Nu (Ν, ν), Xi (Ξ, ξ), Omicron (Ο, ο), Pi (Π, π), Rho (Ρ, ), Sigma (, σ, ς), Tau (Τ, τ), Upsilon (Υ, υ), Phi (Φ, φ), Chi (Χ, χ), Psi (Ψ, ψ), and Omega (Ω, ω)
     latex = latex.replace("\\alpha", "α")
     latex = latex.replace("\\beta", "β")
@@ -279,11 +284,20 @@ def main():
     latex = latex.replace("\\prime", "′")
     latex = latex.replace("\\circ", "•")
     latex = latex.replace("\\diamond", "♢")
+    latex = latex.replace("\\sim", "∽")
     latex = latex.replace("\\bigcup", "⋃")
     latex = latex.replace("\\cup ", "∪")
     latex = latex.replace("\\cap ", "∩")
     latex = latex.replace("\\bigcap", "⋂")
-    latex = latex.replace("\\in ", "⊂ ")
+    latex = latex.replace("\\in ", "∈ ")
+    latex = latex.replace("\\notin", "∉")
+    latex = latex.replace("\\subseteq", "⊆")
+    latex = latex.replace("\\subset", "⊂")
+    latex = latex.replace("\\mathcal{L}", "𝓛")
+    latex = latex.replace("\\mathcal{R}", "𝓡")
+    latex = latex.replace("\\mathcal{M}", "𝓜")
+    latex = latex.replace("\\mathcal{F}", "𝓕")
+    latex = latex.replace("_{x}", "ₓ")
     # tabulars...
     multicolre = re.compile(r"\\multicolumn{([^}]*)}{([^}]*)}")
     latex = multicolre.sub(r"| <!-- FIXME: multicolumn \1 \2 -->", latex)
@@ -380,6 +394,8 @@ def main():
     latex = latex.replace(r"\)", "</span>")
     latex = latex.replace(r"\[", "<div class='math'>")
     latex = latex.replace(r"\]", "</div>")
+    verbpipere = re.compile(r"\\verb\|([^|]*)\|")
+    latex = verbpipere.sub(r"`\1`", latex)
     urlre = re.compile(r"\\url{([^}]*)}", re.MULTILINE)
     latex = urlre.sub(r"<\1>", latex)
     hrefre = re.compile(r"\\href{([^}]*)}{([^}]*)}", re.MULTILINE)
@@ -623,7 +639,7 @@ def main():
     titlere = re.compile(r"\\title{([^}]*)}", re.MULTILINE)
     titles = titlere.findall(latex)
     if len(titles) == 0:
-        print("Couldn't find title maybe not document")
+        print("Couldn't find title maybe not document:")
         print(latex)
         sys.exit(1)
     elif len(titles) > 1:
